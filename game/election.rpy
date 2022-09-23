@@ -370,6 +370,26 @@ init python:
                 rv[win] += 1
             return [(p, s) for p, s in rv.items() if s]
 
+    class Pavia1(Proportional):
+        name = _("Proportional (Pavia)")
+
+        def attrib(self, results):
+
+            advantage = {} # benefit of rounding up rather than down
+            rv = {}
+            for p, votes in results.items():
+                fair = votes*self.nseats/sum(results.values()) # nombre juste flottant de sièges
+                rv[p] = int(fair)
+                down_error = (fair%1)/fair # erreur de l'arrondi vers le bas, proportionnellement au nombre (juste) de sièges
+                up_error = (1-(fair%1))/fair # erreur de l'arrondi vers le haut, proportionnellement au nombre (juste) de sièges
+                advantage[p] = abs(up_error) - abs(down_error)
+
+            winners = sorted(advantage, key=advantage.get)[:(self.nseats-sum(rv.values()))]
+            for p in winners:
+                rv[p] += 1
+
+            return rv.items()
+
     class HareBase(Proportional):
         __slots__ = ("threshold")
         name = _("Proportional (largest remainder)")
