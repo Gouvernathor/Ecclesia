@@ -487,3 +487,105 @@ init python:
 init python:
     def is_subclass(a, b, /):
         return isinstance(a, type) and issubclass(a, b)
+
+    def test_proportionals(it=1000):
+        random = renpy.random.Random()
+        alpha = 'abcdefghijklmnopqrstuvwxyz'
+        solutions = 0
+        for _k in range(it):
+        # while solutions < 5:
+            votes = {l : random.randrange(1000, 100000) for l in alpha[:random.randrange(2, 20)]}
+            nseats = random.randrange(10, 100)
+            # votes = dict(A=21878, B=9713, C=4167, D=3252, E=1065)
+            # nseats = 43
+            sumvotes = sum(votes.values())
+
+            meandev = {}
+            maxdev = {}
+            results = {}
+            rtemplate = dict.fromkeys(votes, 0)
+            for Attrib in (FakeHondt, SainteLagueBase, FakeHare, Pavia):
+                result = dict(Attrib(nseats).attrib(votes))
+                meandev[Attrib] = fmean(abs(result.get(p, 0)-(j:=votes[p]*nseats/sumvotes))/j for p in votes)
+                maxdev[Attrib] = max(abs(result.get(p, 0)-(j:=votes[p]*nseats/sumvotes))/j for p in votes)
+                results[Attrib] = rtemplate | result
+
+            # if min(meandev, key=meandev.get) != SainteLagueBase:
+            # if (meandev[FakeHare] != meandev[Pavia]) or (meandev[SainteLagueBase] != meandev[Pavia]) or (maxdev[FakeHare] != maxdev[Pavia]) or (maxdev[SainteLagueBase] != maxdev[Pavia]):
+            # if (meandev[SainteLagueBase] != meandev[Pavia]) or (maxdev[SainteLagueBase] != maxdev[Pavia]):
+            if results[SainteLagueBase] != results[Pavia]:
+                solutions += 1
+                print("Found solution:")
+                # if meandev[FakeHondt] < meandev[SainteLagueBase]:
+                #     print("UNEXPECTED : FakeHondt is better than SainteLague")
+                # if meandev[FakeHare] < meandev[SainteLagueBase]:
+                #     print("UNEXPECTED : FakeHare is better than SainteLague")
+                # if meandev[FakeHare] < meandev[FakeHondt]:
+                #     print("UNEXPECTED : FakeHare is better than FakeHondt")
+                if meandev[Pavia] != min(meandev.values()):
+                    print("UNEXPECTED : Pavia is worse than other methods, in the sum metric")
+                # print(f"votes={dict(sorted(votes.items(), key=votes.get, reverse=True))}")
+                # if maxdev[Pavia] > maxdev[FakeHare]:
+                #     print("UNEXPECTED : Pavia is worse than Hare")
+                # if maxdev[Pavia] > maxdev[SainteLagueBase]:
+                #     print("UNEXPECTED : Pavia is worse than SainteLague")
+                if maxdev[Pavia] != min(maxdev.values()):
+                    print("UNEXPECTED : Pavia is worse than other methods, in the max metric")
+                print(f"{votes=}")
+                print(f"{results=}")
+                print(f"{meandev=}")
+                print(f"{maxdev=}")
+
+            if solutions >= 5:
+                break
+        print(f"{solutions=}")
+
+    def test_monotonicity(Attrib):
+        random = renpy.random.Random()
+        alpha = 'abcdefghijklmnopqrstuvwxyz'
+
+        votes = {l : random.randrange(1000, 100000) for l in alpha[:random.randrange(2, 20)]}
+        former_result = {}
+        for nseats in range(1, 2000):
+            if not (nseats % 100):
+                print(f"{nseats=}")
+            result = dict(Attrib(nseats).attrib(votes))
+            for party in votes:
+                if result.get(party, 0) < former_result.get(party, 0):
+                    print(f"{Attrib} is not monotonic")
+                    print(f"{votes=}")
+                    print(f"For {nseats} seats, {result=}")
+                    print(f"For {nseats-1} seats, {former_result=}")
+                    return
+            former_result = result
+        print(f"{Attrib} is (probably) monotonic")
+
+    from math import ceil
+
+    def test_quota(Attrib):
+        random = renpy.random.Random()
+        alpha = 'abcdefghijklmnopqrstuvwxyz'
+
+        votes = {l : random.randrange(1000, 100000) for l in alpha[:random.randrange(2, 20)]}
+        allvotes = sum(votes.values())
+        lower = upper = True
+        for nseats in range(1, 2000):
+            if not (nseats % 100):
+                print(f"{nseats=}")
+            result = dict(Attrib(nseats).attrib(votes))
+            for party in votes:
+                if lower and (result.get(party, 0) < int(votes[party]*nseats/allvotes)):
+                    lower = False
+                    print(f"{Attrib=} violates lower quota rule")
+                    print(f"{votes=}")
+                    print(f"For {nseats} seats, {result=}")
+                if upper and (result.get(party, 0) > ceil(votes[party]*nseats/allvotes)):
+                    upper = False
+                    print(f"{Attrib=} violates upper quota rule")
+                    print(f"{votes=}")
+                    print(f"For {nseats} seats, {result=}")
+                    print(f"Party {party} has {votes[party]*nseats/allvotes} fair seats")
+                if not (lower or upper):
+                    return
+        if lower and upper:
+            print(f"{Attrib} (probably) respects the quota rule")
