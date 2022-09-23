@@ -114,7 +114,7 @@ init python:
 
 init python:
     from collections import defaultdict
-    import types
+    from statistics import fmean
 
     attribution_methods = []
 
@@ -388,6 +388,36 @@ init python:
             for p in winners:
                 rv[p] += 1
 
+            return rv.items()
+
+    class Pavia2(Proportional):
+        """
+        A divisor method which seeks to minimize the average error (across all
+        states/candidates) between the theoretical floating-point number of
+        seats and the apportioned number of seats, relative to the theoretical
+        number of seats.
+        """
+
+        name = _("Proportional (Pavia)")
+
+        def attrib(self, results):
+            fairs = {p : votes*self.nseats/sum(results.values()) for p, votes in results.items()}
+            # fair, floating-point number of seats for each party
+
+            def mean_error(party):
+                """
+                Returns the mean, between all parties, of the error between the
+                theoretical number of seats and the apportioned number of
+                seats, if `party` were allocated one more seat.
+                """
+                return fmean(abs(rv[p]+(party==p)-fairs[p])/fairs[p] for p in rv)
+
+            rv = dict.fromkeys(results, 0)
+            for _s in range(self.nseats):
+                # find the party which would bring the mean error down the most,
+                # were it given one more seat
+                win = min(results, key=mean_error)
+                rv[win] += 1
             return rv.items()
 
     class HareBase(Proportional):
