@@ -350,6 +350,26 @@ init python:
                 return HondtWithThreshold(threshold=threshold, *args, **kwargs)
             return HondtNoThreshold(*args, **kwargs)
 
+    class SainteLagueBase(Proportional):
+        # __slots__ = ("threshold")
+        name = _("Proportional (largest averages)")
+
+        threshold = 0 # remove
+
+        def attrib(self, results):
+            if self.threshold:
+                results_ = results
+                thresh = self.threshold * sum(results.values())
+                results = {p:s for p, s in results.items() if s >= thresh}
+                if not results:
+                    return self.contingency.attrib(results_)
+
+            rv = defaultdict(int)
+            for _k in range(self.nseats):
+                win = max(results, key=(lambda p:results[p]/(rv[p]+.5)))
+                rv[win] += 1
+            return [(p, s) for p, s in rv.items() if s]
+
     class HareBase(Proportional):
         __slots__ = ("threshold")
         name = _("Proportional (largest remainder)")
