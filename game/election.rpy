@@ -420,6 +420,44 @@ init python:
                 rv[win] += 1
             return rv.items()
 
+    class Pavia3(Proportional):
+        """
+        A divisor method which seeks to minimize the average error (across all
+        states/candidates) between the theoretical floating-point number of
+        seats and the apportioned number of seats, relative to the theoretical
+        number of seats.
+        """
+
+        name = _("Proportional (Pavia)")
+
+        def attrib(self, results):
+            shares = {p : votes/sum(results.values()) for p, votes in results.items()}
+            # share, percentage of the vote received by each party
+
+            def relative_error(party, offset=0):
+                """
+                Returns the relative error, normalized by the fair number of
+                seats, of the `party`, if it had `offset` more seats.
+                """
+                return abs((rv[party]+offset)/self.nseats - shares[party]) / shares[party]
+
+            def relative_error_net_gain(party):
+                """
+                Returns the gain/loss of relative error if `party` were
+                allocated one more seat.
+                """
+                return relative_error(party, 1) - relative_error(party)
+
+            rv = dict.fromkeys(results, 0)
+            for _s in range(self.nseats):
+                # find the party which would bring the mean error down the most,
+                # were it given one more seat
+                win = min(results, key=relative_error_net_gain)
+                rv[win] += 1
+            return rv.items()
+
+    Pavia = Pavia3
+
     class HareBase(Proportional):
         __slots__ = ("threshold")
         name = _("Proportional (largest remainder)")
