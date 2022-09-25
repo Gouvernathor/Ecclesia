@@ -456,7 +456,53 @@ init python:
                 rv[win] += 1
             return rv.items()
 
-    Pavia = Pavia3
+    class Pavia4(Proportional):
+        """
+        A divisor method which seeks to minimize the average error (across all
+        states/candidates) between the theoretical floating-point number of
+        seats and the apportioned number of seats, relative to the theoretical
+        number of seats.
+        """
+        """
+        Here is a more optimized version.
+        """
+
+        name = _("Proportional (Pavia)")
+
+        def attrib(self, results):
+            shares = {p : votes/sum(results.values()) for p, votes in results.items()}
+            # share, percentage of the vote received by each party
+
+            def relative_error(party, offset=0):
+                """
+                Returns the relative error, normalized by the fair number of
+                seats, of the `party`, if it had `offset` more seats.
+                """
+                share = shares[party]
+                return abs((rv[party]+offset)/self.nseats - share) / share
+
+            relative_cache = _dict() # party -> relative net error gain
+            def relative_error_net_gain(party):
+                """
+                Returns the gain/loss of relative error if `party` were
+                allocated one more seat.
+                """
+                ret = relative_cache.get(party, None)
+                if ret is None:
+                    ret = relative_error(party, 1) - relative_error(party)
+                    relative_cache[party] = ret
+                return ret
+
+            rv = _dict.fromkeys(results, 0)
+            for _s in range(self.nseats):
+                # find the party such that giving it one more seat would bring
+                # the mean error down the most
+                win = min(results, key=relative_error_net_gain)
+                del relative_cache[win]
+                rv[win] += 1
+            return rv.items()
+
+    Pavia = Pavia4
 
     class HareBase(Proportional):
         __slots__ = ("threshold")
