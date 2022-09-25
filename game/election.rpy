@@ -607,14 +607,15 @@ init python:
                 # if meandev[FakeHare] < meandev[FakeHondt]:
                 #     print("UNEXPECTED : FakeHare is better than FakeHondt")
                 if meandev[Pavia] != min(meandev.values()):
-                    print("UNEXPECTED : Pavia is worse than other methods, in the sum metric")
+                    print(f"UNEXPECTED : Pavia is worse than {min(meandev, key=meandev.get)}, in the mean metric")
                 # print(f"votes={dict(sorted(votes.items(), key=votes.get, reverse=True))}")
                 # if maxdev[Pavia] > maxdev[FakeHare]:
                 #     print("UNEXPECTED : Pavia is worse than Hare")
                 # if maxdev[Pavia] > maxdev[SainteLagueBase]:
                 #     print("UNEXPECTED : Pavia is worse than SainteLague")
                 if maxdev[Pavia] != min(maxdev.values()):
-                    print("UNEXPECTED : Pavia is worse than other methods, in the max metric")
+                    print(f"UNEXPECTED : Pavia is worse than {min(maxdev, key=maxdev.get)}, in the max metric")
+                print(f"{nseats=}")
                 print(f"{votes=}")
                 print(f"{results=}")
                 print(f"{meandev=}")
@@ -646,30 +647,31 @@ init python:
 
     from math import ceil
 
-    def test_quota(Attrib):
+    def test_quota(Attrib, tries=1):
         random = renpy.random.Random()
         alpha = 'abcdefghijklmnopqrstuvwxyz'
 
-        votes = {l : random.randrange(1000, 100000) for l in alpha[:random.randrange(2, 20)]}
-        allvotes = sum(votes.values())
         lower = upper = True
-        for nseats in range(1, 2000):
-            if not (nseats % 100):
-                print(f"{nseats=}")
-            result = dict(Attrib(nseats).attrib(votes))
-            for party in votes:
-                if lower and (result.get(party, 0) < int(votes[party]*nseats/allvotes)):
-                    lower = False
-                    print(f"{Attrib=} violates lower quota rule")
-                    print(f"{votes=}")
-                    print(f"For {nseats} seats, {result=}")
-                if upper and (result.get(party, 0) > ceil(votes[party]*nseats/allvotes)):
-                    upper = False
-                    print(f"{Attrib=} violates upper quota rule")
-                    print(f"{votes=}")
-                    print(f"For {nseats} seats, {result=}")
-                    print(f"Party {party} has {votes[party]*nseats/allvotes} fair seats")
-                if not (lower or upper):
-                    return
+        for _k in range(tries):
+            votes = {l : random.randrange(1000, 100000) for l in alpha[:random.randrange(2, 20)]}
+            allvotes = sum(votes.values())
+            for nseats in range(1, 2000):
+                if not (nseats % 100):
+                    print(f"{nseats=}")
+                result = dict(Attrib(nseats).attrib(votes))
+                for party in votes:
+                    if lower and (result.get(party, 0) < int(votes[party]*nseats/allvotes)):
+                        lower = False
+                        print(f"{Attrib=} violates lower quota rule")
+                        print(f"{votes=}")
+                        print(f"For {nseats} seats, {result=}")
+                    if upper and (result.get(party, 0) > ceil(votes[party]*nseats/allvotes)):
+                        upper = False
+                        print(f"{Attrib=} violates upper quota rule")
+                        print(f"{votes=}")
+                        print(f"For {nseats} seats, {result=}")
+                        print(f"Party {party} has {votes[party]*nseats/allvotes} fair seats")
+                    if not (lower or upper):
+                        return
         if lower and upper:
             print(f"{Attrib} (probably) respects the quota rule")
