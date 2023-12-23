@@ -7,6 +7,8 @@ class ElectionMethod(namedtuple("ElectionMethod", ("voting_method", "attribution
 
     __slots__ = ()
 
+    __lt__ = __gt__ = __le__ = __ge__ = lambda self, other: NotImplemented
+
     def election(self, *args, **kwargs):
         return self.attribution_method.attrib(self.voting_method.vote(*args, **kwargs))
 
