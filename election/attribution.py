@@ -159,7 +159,7 @@ class RankIndexMethod(Proportional):
         The seat will be attributed to the party maximizing that value.
         """
 
-    def attrib(self, votes):
+    def attrib(self, votes, /):
         seats = Counter()
 
         for _s in range(self.nseats):
@@ -318,7 +318,7 @@ class Condorcet(Attribution):
 
         win = set(counts)
         for parti, partycounter in counts.items():
-            for value in +partycounter.values():
+            for value in (+partycounter).values():
                 if value < majority:
                     win.discard(parti)
                     break
