@@ -6,6 +6,7 @@ import random # TODO: make parameterizable
 from typing import ClassVar
 
 SQ2 = sqrt(2)
+NAN = float("nan")
 
 def _normal_to_uniform(x, mu, sigma):
     """Converts a normal distribution to a uniform distribution.
@@ -16,7 +17,7 @@ def _normal_to_uniform(x, mu, sigma):
     """
     return 0.5 * (1 + erf((x - mu) / (sigma * SQ2)))
 
-def get_alignment(opinions, opinmax, factors=None):
+def get_alignment(opinions, opinmax, factors=None) -> float:
     """Returns the one-dimensional alignment of the opinions.
 
     Assuming `opinions` follow the nominal constraints with regards to
@@ -96,10 +97,55 @@ class HasOpinions(abc.ABC):
         """
         return NotImplemented
 
-    def get_alignment(self=None, factors=None):
+    def get_alignment(self=None, factors=None) -> float:
         if factors is None:
             factors = self.opinion_alignment_factors
         return get_alignment(self.opinions, self.opinmax, factors)
+
+
+class Vote(namedtuple("Vote", ("votes_for", "votes_against"))):
+    """ The results of a binary vote.
+
+    The blank votes are not counted. To calculate a threshold on the whole
+    number of members, use ``vote.votes_for / house.nseats``. To calculate the
+    threshold on the number of duly elected members, use
+    ``vote.votes_for / sum(house.members.values())``.
+    """
+
+    __slots__ = ()
+
+    __lt__ = __gt__ = __le__ = __ge__ = lambda self, other: NotImplemented
+
+    def __neg__(self):
+        """
+        Returns the reverse of the vote, inverting the for/against ratio.
+        Simulates a vote on the opposite motion.
+        """
+        return type(self)(self.votes_against, self.votes_for)
+
+    @property
+    def votes_cast(self) -> int:
+        return sum(self)
+
+    @property
+    def ratio(self) -> float:
+        """
+        Returns the ratio of votes for over the total of votes cast.
+        If there are no votes cast, returns a nan.
+        """
+        cast = self.votes_cast
+        if not cast:
+            return NAN
+        return self.votes_for / cast
+
+    @staticmethod
+    def order(*votes):
+        """
+        Returns the votes in order of decreasing ratio.
+        The ties are ordered by decreasing number of positive votes,
+        then by the order they came in.
+        """
+        return sorted(votes, key=(lambda v:(-v.ratio, -v.votes_for)))
 
 
 class House:
@@ -162,7 +208,7 @@ class House:
                     pass
             self.nseats = nseats
 
-        def election(self):
+        def election(self) -> Counter[HasOpinions, int]:
             return self.election_method.election(self.voterpool)
 
         def __repr__(self):
@@ -177,7 +223,10 @@ class House:
         """
         `districts` may either be an iterable of district instances, if the
         House is created empty, but it can also be a dict linking each district
-        to a Counter (or dict) of already attributed seats.
+        to a Counter of already attributed seats.
+        You can create a partiless House with individual members, by passing
+        ``Counter(district_members_lists)`` as a value for each district, but it
+        is intended that the Counters' keys be parties with indistinct members.
 
         `name` is only used in the repr.
         `majority` is used in the `vote` method.
@@ -190,7 +239,7 @@ class House:
         self.majority = majority
 
     @property
-    def members(self):
+    def members(self) -> Counter[HasOpinions, int]:
         """
         Returns a Counter linking each party to the number of seats it holds,
         regardless of the district.
@@ -205,7 +254,7 @@ class House:
         return rv
 
     @property
-    def nseats(self):
+    def nseats(self) -> int|None:
         """
         If all districts support providing a theoretical number of seats,
         returns the total. Otherwise, returns None.
@@ -218,13 +267,28 @@ class House:
             rv += dnseats
         return rv
 
-    def election(self):
-        """Triggers an election in each electoral district, returns the members result."""
+    def election(self) -> Counter[HasOpinions, int]:
+        """Triggers an election in each electoral district, returns the `members` result."""
         rv = Counter()
         for district in tuple(self.districts):
             self.districts[district] = district.election()
             rv += self.districts[district]
         return rv
+
+    def vote(self, ho: HasOpinions) -> Vote:
+        """Returns the result of a vote on `ho`.
+
+        `ho` may be a motion or bill, but also a person to elect or confirm.
+        """
+        votes_for = 0
+        votes_against = 0
+        for party, nseats in self.members.items():
+            disag = ho ^ party
+            if disag > 0:
+                votes_for += nseats
+            elif disag < 0:
+                votes_against += nseats
+        return Vote(votes_for, votes_against)
 
     def __repr__(self):
         name = self.name
