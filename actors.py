@@ -1,5 +1,6 @@
 import abc
-from collections.abc import Sequence
+from collections import Counter, namedtuple
+from collections.abc import Iterable, Sequence
 from math import sqrt, hypot, erf
 import random # TODO: make parameterizable
 from typing import ClassVar
@@ -39,29 +40,8 @@ def get_alignment(opinions, opinmax, factors=None):
     return _normal_to_uniform(scapro, 0, sigma)
 
 class HasOpinions(abc.ABC):
-    """A mixin class for objects that have opinions on subjects.
-
-    The main attribute is `opinions`, a sequence of numerical values (preferably
-    integers). Each value represents the answer to a closed question or
-    affirmation on a certain subject, maximum meaning totally agreeing, minimum
-    meaning totally disagreeing, and 0 meaning being neutral.
-    The length of `opinions` is `nopinions`, and each value is between
-    -`opinmax` and +`opinmax` (inclusive).
-
-    Subclasses of HasOpinions are supposed to override the `__xor__` method
-    (for the `^` operator). It should take other instances of HasOpinions and
-    return a value proportional to the disagreement between the two objects, the
-    higher the stronger the disagreement.
-    The operation should be symmetric : you should add ``__rxor__ = __xor__``
-    in all your subclasses.
-    All subclasses of HasOpinions do not have to support disagreement with all
-    other subclasses in the same system, but the voting methods rely on the
-    `^` operator being supported between the voter and party classes.
-    The operation does not have to be symmetric when it comes to types : you can
-    have different disagreement values between a voter with opinion o and a
-    party with opinion q, than between a voter with opinion q and a party with
-    opinion o.
-
+    """A mixin class for objects that have opinions on subjects."""
+    """
     The `nopinions`, `opinmax` and optionally `opinion_alignment_factors` class
     attributes should be global to a given system, and be set once in a base
     subclass for all your classes having opinions.
@@ -76,21 +56,178 @@ class HasOpinions(abc.ABC):
 
     opinions: Sequence[int]
 
-    def __init__(self, opinions=None, *,
-            randomobj=None,
-            randomkey=None,
-            ):
+    def __init__(self, opinions=None, *, randomobj=None, randomkey=None,):
+        """
+        The main attribute is `opinions`, a sequence of numerical values
+        (preferably integers). Each value represents the answer to a closed
+        question or affirmation on a certain subject, maximum meaning totally
+        agreeing, minimum meaning totally disagreeing, and 0 meaning being
+        neutral.
+        The length of `opinions` should be `nopinions`, and each value should be
+        between -`opinmax` and +`opinmax` (inclusive).
+        """
         if opinions is None:
             if randomobj is None:
                 randomobj = random.Random(randomkey)
-            opinions = randomobj.choices(range(-self.opinmax, self.opinmax+1), k=self.nopinions)
-
+            opinions = randomobj.choices(
+                range(-self.opinmax, self.opinmax+1),
+                k=self.nopinions)
         self.opinions = opinions
 
     def __xor__(self, other, /):
+        """
+        Subclasses of HasOpinions are expected to override the `__xor__` method
+        (for the `^` operator). It should take other instances of HasOpinions
+        and return a value proportional to the disagreement between the two
+        objects, the higher the stronger the disagreement.
+
+        The operation should be symmetric : you should add
+        ``__rxor__ = __xor__`` in all your subclasses.
+
+        All subclasses of HasOpinions do not have to support disagreement with
+        all other subclasses in the same system, or even with other instances of
+        the same subclass, but the voting methods rely on the `^` operator being
+        supported between the voter and party classes.
+
+        The operation does not have to be symmetric when it comes to types : you
+        can have different disagreement values between a voter with opinion o
+        and a party with opinion q, than between a voter with opinion q and a
+        party with opinion o.
+        """
         return NotImplemented
 
     def get_alignment(self=None, factors=None):
         if factors is None:
             factors = self.opinion_alignment_factors
         return get_alignment(self.opinions, self.opinmax, factors)
+
+
+class House:
+    """A whole House of Parliament.
+
+    Some constraints :
+    - all members have the same voting power
+    - staggering is not (yet) supported (that is, when general elections don't
+      renew all the seats at once, like in the french or american Senates),
+      but subclasses may implement it by overriding the election method and
+      subclassing District for example.
+    """
+
+    class District:
+        """An electoral district relating to a House.
+
+        Several district objects can represent the same territory and have the
+        same voter pool, and yet relate to different Houses : this is normal.
+        For example, the districts for the US State of Wyoming would be as
+        follows :
+        - one for the three presidential electors
+        - one for the lone federal representative
+        - one or possibly two for the two federal senators (depending on implem)
+        All three or four of these districts would have the same voter pool, yet
+        be different objects because they relate to different Houses, even in
+        the case where they would have the same election method.
+        """
+
+        def __init__(self,
+                    election_method,
+                    voterpool: Sequence[HasOpinions],
+                    *, identifier=None, nseats=None):
+            """
+            The `election_method` takes an ElectionMethod instance.
+            The `voterpool` parameter takes a sequence (important) of voters,
+            each an instance of HasOpinions. They will be used by the
+            `election_method`.
+
+            The `identifier` optional parameter is used in the repr and serves
+            to identify the districts.
+
+            The `nseats` parameter is optional, intended to be indicative of the
+            theoretical number of seats in the district, and allowing a
+            theoretical number of seats to be associated to a newly-created
+            House before it is first populated.
+            If not provided, it is sought in the attribution method of the
+            election method. Most implementations should rely on that behavior,
+            however keep in mind that some election methods do not have one
+            accessible attribution method, and that attribution methods do not
+            have to have a constant number of seats.
+            """
+            self.election_method = election_method
+            self.voterpool = voterpool
+            self.identifier = identifier
+
+            if nseats is None:
+                try:
+                    nseats = election_method.attribution_method.nseats
+                except AttributeError:
+                    pass
+            self.nseats = nseats
+
+        def election(self):
+            return self.election_method.election(self.voterpool)
+
+        def __repr__(self):
+            identifier = self.identifier
+            if identifier is None:
+                return super().__repr__()
+            return f"<{type(self).__name__} {self.identifier!r}>"
+
+    def __init__(self,
+                districts: Iterable[District]|dict[District, Counter[HasOpinions, int]],
+                *, name=None, majority=.5):
+        """
+        `districts` may either be an iterable of district instances, if the
+        House is created empty, but it can also be a dict linking each district
+        to a Counter (or dict) of already attributed seats.
+
+        `name` is only used in the repr.
+        `majority` is used in the `vote` method.
+        """
+        if not isinstance(districts, dict):
+            districts = {d: Counter() for d in districts}
+        self.districts = districts
+
+        self.name = name
+        self.majority = majority
+
+    @property
+    def members(self):
+        """
+        Returns a Counter linking each party to the number of seats it holds,
+        regardless of the district.
+
+        Takes some time to be computed, so this may be cached in a subclass.
+        For the list (with repetitions) of the individual members, use the
+        `members.elements()` method.
+        """
+        rv = Counter()
+        for dmembers in self.districts.values():
+            rv += dmembers
+        return rv
+
+    @property
+    def nseats(self):
+        """
+        If all districts support providing a theoretical number of seats,
+        returns the total. Otherwise, returns None.
+        """
+        rv = 0
+        for d in self.districts:
+            dnseats = d.nseats
+            if dnseats is None:
+                return None
+            rv += dnseats
+        return rv
+
+    def election(self):
+        """Triggers an election in each electoral district, returns the members result."""
+        rv = Counter()
+        for district in tuple(self.districts):
+            self.districts[district] = district.election()
+            rv += self.districts[district]
+        return rv
+
+    def __repr__(self):
+        name = self.name
+        if name is None:
+            return super().__repr__()
+        return f"<{type(self).__name__} {self.name!r}>"
