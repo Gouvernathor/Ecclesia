@@ -1,0 +1,35 @@
+import abc
+from collections import namedtuple, Counter
+import random # TODO: make parameterizable with renpy.random
+
+class ElectionMethod(namedtuple("ElectionMethod", ("voting_method", "attribution_method")), abc.ABC):
+    """Type regrouping a voting method and an attribution method."""
+
+    __slots__ = ()
+
+    def election(self, *args, **kwargs):
+        return self.attribution_method.attrib(self.voting_method.vote(*args, **kwargs))
+
+
+
+class Sortition:
+    """Implements a selection by lottery, directly among the population.
+
+    Poses problems that SingleVote+Randomize doesn't, as it does not return
+    parties but voters instead.
+    """
+
+    __slots__ = ("nseats", "randomobj")
+
+    def __init__(self, nseats, *, randomkey=None, randomobj=None):
+        self.nseats = nseats
+        if randomobj is None:
+            randomobj = random.Random(randomkey)
+        elif randomkey is not None:
+            raise TypeError("Only one of randomobj and randomkey must be provided.")
+        self.randomobj = randomobj
+
+    def election(self, pool):
+        return Counter(self.randomobj.sample(pool, self.nseats))
+
+ElectionMethod.register(Sortition)
