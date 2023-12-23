@@ -4,7 +4,7 @@ The formats are SIMPLE, ORDER and SCORES.
 Each represents what you get after opening each ballot, under different
 voting systems.
 
-The `format` object is a frozenset containing all of the formats.
+The `formats` pseudo-type can be used for type checks/annotations.
 """
 
 from collections import Counter as _Counter
@@ -71,4 +71,4 @@ class SCORES(dict):
         # self[key] = rv
         return rv
 
-formats = frozenset((SIMPLE, ORDER, SCORES))
+formats = SIMPLE|ORDER|SCORES

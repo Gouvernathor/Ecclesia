@@ -1,7 +1,7 @@
 import abc
 from math import nextafter, floor
 import random # TODO: make parameterizable
-from typing import Collection
+from typing import ClassVar, Collection
 from . import results_format
 
 voting_methods = []
@@ -23,9 +23,8 @@ class VotingMethod(abc.ABC):
     """
 
     __slots__ = ()
-    return_format = None # class attribute, not instance attribute
-
-    name = None # class attribute, not instance attribute
+    return_format: ClassVar = None
+    name: ClassVar = None
 
     def __init__(self, *, partis, randomobj=random):
         if None in (self.name, self.return_format):

@@ -3,6 +3,7 @@ import abc
 from fractions import Fraction
 import random # TODO: make parameterizable
 from statistics import fmean, median
+from typing import ClassVar
 from . import results_format
 
 class AttributionFailure(Exception):
@@ -46,8 +47,8 @@ class Attribution(abc.ABC):
 
     __slots__ = ("nseats", "randomobj")
     contingency = None # class attribute overridden as a slot in some subclasses
-    taken_format = None # class attribute, not instance attribute
-    name = None # class attribute, not instance attribute
+    taken_format: ClassVar[results_format.formats] = None
+    name: ClassVar = None
 
     def __init__(self, nseats, *, randomkey=None, randomobj=None):
         if self.name is None:
