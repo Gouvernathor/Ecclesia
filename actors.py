@@ -2,8 +2,8 @@ import abc
 from collections import Counter, namedtuple
 from collections.abc import Iterable, Sequence
 from math import sqrt, hypot, erf
-import random # TODO: make parameterizable
 from typing import ClassVar
+from . import _settings
 
 SQ2 = sqrt(2)
 NAN = float("nan")
@@ -69,7 +69,7 @@ class HasOpinions(abc.ABC):
         """
         if opinions is None:
             if randomobj is None:
-                randomobj = random.Random(randomkey)
+                randomobj = _settings.Random(randomkey)
             opinions = randomobj.choices(
                 range(-self.opinmax, self.opinmax+1),
                 k=self.nopinions)

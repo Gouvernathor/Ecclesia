@@ -1,6 +1,6 @@
 import abc
 from collections import namedtuple, Counter
-import random # TODO: make parameterizable with renpy.random
+from . import _settings
 
 class ElectionMethod(namedtuple("ElectionMethod", ("voting_method", "attribution_method")), abc.ABC):
     """Type regrouping a voting method and an attribution method."""
@@ -26,7 +26,7 @@ class Sortition:
     def __init__(self, nseats, *, randomkey=None, randomobj=None):
         self.nseats = nseats
         if randomobj is None:
-            randomobj = random.Random(randomkey)
+            randomobj = _settings.Random(randomkey)
         elif randomkey is not None:
             raise TypeError("Only one of randomobj and randomkey must be provided.")
         self.randomobj = randomobj

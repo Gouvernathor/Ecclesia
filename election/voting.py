@@ -1,8 +1,8 @@
 import abc
 from math import nextafter, floor
-import random # TODO: make parameterizable
 from typing import ClassVar, Collection
-from . import results_format
+from . import results_format, _settings
+from .. import actors
 
 voting_methods = []
 
@@ -26,10 +26,12 @@ class VotingMethod(abc.ABC):
     return_format: ClassVar = None
     name: ClassVar = None
 
-    def __init__(self, *, partis, randomobj=random):
+    def __init__(self, *, partis, randomobj=None):
         if None in (self.name, self.return_format):
             raise TypeError(f"Class {type(self)} is not instantiable.")
         self.partis = partis
+        if randomobj is None:
+            randomobj = _settings.electrobj
         self.randomobj = randomobj
 
     def __init_subclass__(cls, final=None, **kwargs):
@@ -38,7 +40,7 @@ class VotingMethod(abc.ABC):
             voting_methods.append(cls)
 
     @abc.abstractmethod
-    def vote(self, pool:Collection, /):
+    def vote(self, pool:Collection[actors.HasOpinions], /):
         """Returns the ballots cast by the `pool` of voters.
 
         Override in subclasses.
@@ -49,7 +51,7 @@ class VotingMethod(abc.ABC):
         0-1 range, the higher the stronger disagreement.
 
         Must return an instance of self.return_format.
-        """ # TODO: export the Citizen and Parties classes ?
+        """
 
 
 
@@ -174,6 +176,7 @@ class ApprovalVote(BalancedCardinalVote):
     but it makes it open to additional attribution methods (proportional ones
     for instance). That's why the format it returns is not the same as
     with CardinalVote.
+    If you want a scores-like attribution, use BalancedCardinalVote(2) instead.
     """
 
     __slots__ = ()

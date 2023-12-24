@@ -1,10 +1,9 @@
 from collections import defaultdict, Counter
 import abc
 from fractions import Fraction
-import random # TODO: make parameterizable
 from statistics import fmean, median
 from typing import ClassVar
-from . import results_format
+from . import results_format, _settings
 
 class AttributionFailure(Exception):
     """Raised when an attribution method fails to attribute seats.
@@ -57,7 +56,7 @@ class Attribution(abc.ABC):
         self.nseats = nseats
 
         if randomobj is None:
-            randomobj = random.Random(randomkey)
+            randomobj = _settings.Random(randomkey)
         elif randomkey is not None:
             raise TypeError("Only one of randomobj and randomkey must be provided.")
         self.randomobj = randomobj
