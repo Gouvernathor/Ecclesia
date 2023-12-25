@@ -117,16 +117,16 @@ class Proportional(Attribution):
         if wrap:
             nothreshold_attrib = cls.attrib
 
-            def attrib(self, results, *args, **kwargs):
+            def attrib(self, votes, /, *args, **kwargs):
                 """Wrapper from the Proportional class around a subclass's attrib method."""
                 if self.threshold:
-                    original_results = results
-                    thresh = self.threshold * sum(results.values())
-                    results = self.taken_format({p:v for p,v in results.items() if v >= thresh})
-                    if not results:
-                        return self.contingency.attrib(original_results, *args, **kwargs)
+                    original_votes = votes
+                    thresh = self.threshold * sum(votes.values())
+                    votes = self.taken_format({p:v for p,v in votes.items() if v >= thresh})
+                    if not votes:
+                        return self.contingency.attrib(original_votes, *args, **kwargs)
 
-                return nothreshold_attrib(self, results, *args, **kwargs)
+                return nothreshold_attrib(self, votes, *args, **kwargs)
 
             cls.attrib = attrib
 
@@ -146,7 +146,7 @@ class RankIndexMethod(Proportional):
         """
         Override in subclasses.
 
-        `t`, is the percentage of votes received by a party, as a Fraction.
+        `t` is the percentage of votes received by a party, as a Fraction.
         `a` is the number of seats already allocated to the party (it will be
         an integer).
         The total number of seats can be accessed as self.nseats.
@@ -232,6 +232,8 @@ class InstantRunoff(Attribution):
     its votes are redistributed to the other parties according to the voters'
     preferences. Repeats until a party reaches an absolute majority of the
     remaining votes, winning all the seats.
+
+    Ballots not ranking all candidates are supported.
     """
 
     __slots__ = ()
@@ -264,6 +266,7 @@ class Borda(Attribution):
 
     Uses the Modified Borda Count, where the least-ranked candidate receives 1
     point, and unranked candidates receive 0 points.
+    So, ballots not ranking all candidates are supported.
     """
 
     __slots__ = ()
