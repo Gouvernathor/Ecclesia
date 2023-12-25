@@ -106,7 +106,7 @@ class Proportional(Attribution):
         super().__init__(*args, **kwargs)
         self.threshold = threshold
         if (contingency is None) and (threshold is not None):
-                contingency = type(self)
+            contingency = type(self)
         if isinstance(contingency, type):
             contingency = contingency(*args, **kwargs)
         self.contingency = contingency
@@ -118,7 +118,7 @@ class Proportional(Attribution):
             nothreshold_attrib = cls.attrib
 
             def attrib(self, results, *args, **kwargs):
-                """Wrapper from the Propotional class around a subclass's attrib method."""
+                """Wrapper from the Proportional class around a subclass's attrib method."""
                 if self.threshold:
                     original_results = results
                     thresh = self.threshold * sum(results.values())
@@ -273,14 +273,14 @@ class Borda(Attribution):
     def attrib(self, votes, /):
         scores = Counter()
         for ballot in votes:
-            for i, parti in enumerate(reversed(ballot),start=1):
+            for i, parti in enumerate(reversed(ballot), start=1):
                 scores[parti] += i
         return Counter({max(scores, key=scores.get): self.nseats})
 
 class Condorcet(Attribution):
     """
     Attribution method where each party is matched against each other party, and
-    the party with the most wins wins all the seats.
+    the party winning each of its matches wins all the seats.
     If no party wins against all the others, the attribution fails.
 
     Doesn't support equally-ranked candidates, because the taken format doesn't
