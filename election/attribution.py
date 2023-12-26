@@ -138,12 +138,6 @@ class RankIndexMethod(Proportional):
 
     __slots__ = ()
 
-    def __key(self, votes, seats):
-        allvotes = sum(votes.values())
-        def f(p):
-            return self.rank_index_function(Fraction(votes[p], allvotes), seats[p])
-        return f
-
     @abc.abstractmethod
     def rank_index_function(self, t, a, /):
         """
@@ -163,10 +157,14 @@ class RankIndexMethod(Proportional):
         """
 
     def attrib(self, votes, /):
+        allvotes = sum(votes.values())
         seats = Counter()
 
+        def key(p):
+            return self.rank_index_function(Fraction(votes[p], allvotes), seats[p])
+
         for _s in range(self.nseats):
-            seats[max(votes, key=self.__key(votes, seats))] += 1
+            seats[max(votes, key=key)] += 1
 
         return seats
 
