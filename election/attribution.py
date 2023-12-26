@@ -1,9 +1,12 @@
 from collections import defaultdict, Counter
 import abc
 from fractions import Fraction
+from math import sqrt
 from statistics import fmean, median
 from typing import ClassVar
 from . import results_format, _settings
+
+INF = float("inf")
 
 class AttributionFailure(Exception):
     """Raised when an attribution method fails to attribute seats.
@@ -442,6 +445,49 @@ class Hare(Proportional):
 
 LargestRemainder = Hare
 
+class HuntingtonHill(DivisorMethod, wrap=False):
+    """
+    This method requires a bit more creativity and tweaks, since the divisor
+    won't work without initial seats value, causing division by zero.
+    As a result, passing a threshold is mandatory.
+    For a situation where the parties in presence are already limited by other
+    means (for example when sharing representatives between US states) to be
+    less or equal to the number of seats, you can pass a threshold of 0.
+    """
+
+    __slots__ = ()
+    name = "Proportional (highest averages, Huntington-Hill)"
+
+    def __init__(self, *args, threshold, contingency=None, **kwargs):
+        super().__init__(*args, threshold=threshold, contingency=contingency, **kwargs)
+
+    def divisor(self, k):
+        # cast to closest Rational to avoid escalating rounding errors
+        return Fraction(sqrt(k*(k+1)))
+
+    def rank_index_function(self, t, a, /):
+        if not a:
+            return INF
+        return super().rank_index_function(t, a)
+
+    def attrib(self, votes, /):
+        # Proportional's attrib wrapper won't work, since the method to call
+        # after filtering the parties is not the one defined in the class but
+        # in the superclass
+        # Passing, somehow, the attrib itself as the fallback would first
+        # pose some consequent implementation issues, and then prevent having
+        # an actual contingency method in the case of no party reaching the
+        # threshold.
+
+        original_votes = votes
+        threshold = self.threshold * sum(votes.values())
+        votes = self.taken_format({p:v for p,v in votes.items() if v >= threshold})
+        if not votes:
+            return self.contingency.attrib(original_votes)
+        return super().attrib(votes)
+
+
+# Random-based attribution method
 
 class Randomize(Attribution):
     """Randomized attribution.
