@@ -8,6 +8,7 @@ from . import results_format, _settings
 
 INF = float("inf")
 
+# TODO: implement consistently
 class AttributionFailure(Exception):
     """Raised when an attribution method fails to attribute seats.
 
@@ -157,14 +158,29 @@ class RankIndexMethod(Proportional):
         """
 
     def attrib(self, votes, /):
+        """
+        This implementation is optimized so as to call rank_index_function
+        as few times as possible.
+        """
         allvotes = sum(votes.values())
+        fractions = {p: Fraction(votes[p], allvotes) for p in votes}
+
+        rank_index_values = {p: self.rank_index_function(fractions[p], 0) for p in votes}
+
+        parties = list(votes)
+        self.randomobj.shuffle(parties)
+        parties.sort(key=rank_index_values.get)
+
         seats = Counter()
 
-        def key(p):
-            return self.rank_index_function(Fraction(votes[p], allvotes), seats[p])
-
         for _s in range(self.nseats):
-            seats[max(votes, key=key)] += 1
+            # possibly reimplement this using sortedcollections.ValueSortedDict
+            winner = parties.pop()
+            seats[winner] += 1
+            rank_index_values[winner] = self.rank_index_function(fractions[winner], seats[winner])
+            for i, p in enumerate(parties):
+                if rank_index_values[p] >= rank_index_values[winner]:
+                    parties.insert(i, winner)
 
         return seats
 
