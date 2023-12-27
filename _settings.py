@@ -20,9 +20,9 @@ def set_random(Random_=_Random, /, *, reset_electrobj=True):
             reset_electrobj = None
         set_electrobj(Random_(reset_electrobj))
 
-set_random()
-
 def set_electrobj(electrobj_, /):
     """Sets the random object used by the voting methods."""
     global electrobj
     electrobj = electrobj_
+
+set_random()
