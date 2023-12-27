@@ -1,6 +1,7 @@
 import abc
 from collections import namedtuple, Counter
-from . import _settings
+from . import results_format, voting, attribution
+from .. import _settings
 
 class ElectionMethod(namedtuple("ElectionMethod", ("voting_method", "attribution_method")), abc.ABC):
     """Type regrouping a voting method and an attribution method."""

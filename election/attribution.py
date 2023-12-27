@@ -4,7 +4,8 @@ from fractions import Fraction
 from math import sqrt
 from statistics import fmean, median
 from typing import ClassVar
-from . import results_format, _settings
+from . import results_format
+from .. import _settings
 
 INF = float("inf")
 

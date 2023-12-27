@@ -1,8 +1,8 @@
 import abc
 from math import nextafter, floor
 from typing import ClassVar, Collection
-from . import results_format, _settings
-from .. import actors
+from . import results_format
+from .. import actors, _settings
 
 voting_methods = []
 
