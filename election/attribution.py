@@ -182,6 +182,9 @@ class RankIndexMethod(Proportional):
             for i, p in enumerate(parties):
                 if rank_index_values[p] >= rank_index_values[winner]:
                     parties.insert(i, winner)
+                    break
+            else:
+                parties.append(winner)
 
         return seats
 
