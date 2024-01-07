@@ -193,11 +193,13 @@ class DivisorMethod(RankIndexMethod):
 
     __slots__ = ()
 
-    def rank_index_function(self, t, a, /):
-        return Fraction(t, self.divisor(a))
+    @classmethod
+    def rank_index_function(cls, t, a, /):
+        return Fraction(t, cls.divisor(a))
 
+    @staticmethod
     @abc.abstractmethod
-    def divisor(self, k):
+    def divisor(k):
         """Explain it yourself if you're so clever !"""
 
 
@@ -430,7 +432,8 @@ class DHondt(DivisorMethod):
     __slots__ = ()
     name = "Proportional (highest averages, Jefferson/D'Hondt)"
 
-    def divisor(self, k):
+    @staticmethod
+    def divisor(k):
         return k+1
 
 HighestAverages = DHondt
@@ -439,7 +442,8 @@ class Webster(DivisorMethod):
     __slots__ = ()
     name = "Proportional (highest averages, Webster/Sainte-Laguë)"
 
-    def divisor(self, k):
+    @staticmethod
+    def divisor(k):
         # return k + .5
         return 2*k + 1 # int maths is more accurate
 
@@ -479,7 +483,8 @@ class HuntingtonHill(DivisorMethod, wrap=False):
     def __init__(self, *args, threshold, contingency=None, **kwargs):
         super().__init__(*args, threshold=threshold, contingency=contingency, **kwargs)
 
-    def divisor(self, k):
+    @staticmethod
+    def divisor(k):
         # cast to closest Rational to avoid escalating rounding errors
         return Fraction(sqrt(k*(k+1)))
 
