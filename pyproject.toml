@@ -1,0 +1,19 @@
+[project]
+dynamic = ["version"]
+name = "Ecclesia"
+# requires-python = ""
+authors = [
+    {name = "Gouvernathor"}
+]
+description = "A framework and library for election and apportionment methods and parliamentary simulations."
+# readme = ""
+license = {file = "LICENSE"}
+
+[project.urls]
+Repository = "https://github.com/Gouvernathor/Ecclesia"
+
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
