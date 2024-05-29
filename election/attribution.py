@@ -1,13 +1,11 @@
 from collections import defaultdict, Counter
 import abc
 from fractions import Fraction
-from math import sqrt
+from math import sqrt, inf as INF
 from statistics import fmean, median
 from typing import ClassVar
 from . import results_format
 from .. import _settings
-
-INF = float("inf")
 
 # TODO: implement consistently
 class AttributionFailure(Exception):
