@@ -1,12 +1,11 @@
 import abc
 from collections import Counter, namedtuple
 from collections.abc import Iterable, Sequence
-from math import sqrt, hypot, erf
+from math import sqrt, hypot, erf, nan as NAN
 from typing import ClassVar
 from . import _settings
 
 SQ2 = sqrt(2)
-NAN = float("nan")
 
 def _normal_to_uniform(x, mu, sigma):
     """Converts a normal distribution to a uniform distribution.
