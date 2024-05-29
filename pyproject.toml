@@ -1,7 +1,7 @@
 [project]
 dynamic = ["version"]
 name = "Ecclesia"
-# requires-python = ""
+requires-python = "3.11"
 authors = [
     {name = "Gouvernathor"}
 ]
