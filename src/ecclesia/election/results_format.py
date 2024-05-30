@@ -9,6 +9,8 @@ The `formats` pseudo-type can be used for type checks/annotations.
 
 from collections import Counter as _Counter
 
+__all__ = ("SIMPLE", "ORDER", "SCORES", "formats")
+
 class SIMPLE(_Counter):
     """SIMPLE : Counter(party : number of ballots)
 
