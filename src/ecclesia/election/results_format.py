@@ -7,23 +7,24 @@ voting systems.
 The `formats` pseudo-type can be used for type checks/annotations.
 """
 
-from collections import Counter as _Counter
+from collections import Counter
+from collections.abc import MutableSequence, Sequence
 
 __all__ = ("SIMPLE", "ORDER", "SCORES", "formats")
 
-class SIMPLE(_Counter):
+class SIMPLE[P](Counter[P]):
     """SIMPLE : Counter(party : number of ballots)
 
     {PS : 5, LR : 7} -> 5 ballots for PS, 7 for LR
     """
 
-    __slots__ = ()
+    __slots__ = () # useless for Counter
 
     @classmethod
     def fromkeys(cls, keys, value=None):
         return cls(dict.fromkeys(keys, value))
 
-class ORDER(tuple):
+class ORDER[P](tuple[Sequence[P], ...]):
     """ORDER : iterable(iterable(parties ordered by decreasing preference))
 
     [(LR, PS, LFI), (LFI, PS,), ] -> one voter prefers LR then PS then LFI,
@@ -39,7 +40,7 @@ class ORDER(tuple):
 
     __slots__ = ()
 
-class SCORES(dict):
+class SCORES[P](dict[P, MutableSequence[int]]):
     """SCORES : dict(party : iterable(number of ballots for each grade))
 
     {PS : (0, 2, 5, 9, 1)} -> PS received the worst grade 0 times, the best grade 1 time and you get it.
@@ -73,4 +74,4 @@ class SCORES(dict):
         # self[key] = rv
         return rv
 
-formats = SIMPLE|ORDER|SCORES
+type formats[P] = SIMPLE[P]|ORDER[P]|SCORES[P]
