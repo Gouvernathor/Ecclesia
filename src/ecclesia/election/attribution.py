@@ -1,11 +1,14 @@
 from collections import defaultdict, Counter
 import abc
+from collections.abc import Callable
 from fractions import Fraction
 from math import sqrt, inf as INF
 from statistics import fmean, median
-from typing import ClassVar
+from typing import ClassVar, NewType, Self, TypeVar
+
 from . import results_format
 from .. import _settings
+from ..actors import HasOpinions
 
 # TODO: implement consistently
 class AttributionFailure(Exception):
@@ -15,6 +18,9 @@ class AttributionFailure(Exception):
     when an absolute majority is required but not reached.
     Attribution methods will raise other exceptions.
     """
+
+Party = NewType("Party", HasOpinions)
+taken_format = TypeVar("taken_format", bound=results_format.formats[Party])
 
 attribution_methods = []
 
@@ -49,8 +55,7 @@ class Attribution(abc.ABC):
 
     __slots__ = ("nseats", "randomobj")
     contingency = None # class attribute overridden as a slot in some subclasses
-    taken_format: ClassVar[results_format.formats] = None
-    name: ClassVar = None
+    name: ClassVar[str|None] = None
 
     def __init__(self, nseats, *, randomkey=None, randomobj=None):
         if self.name is None:
@@ -72,7 +77,7 @@ class Attribution(abc.ABC):
             attribution_methods.append(cls)
 
     @abc.abstractmethod
-    def attrib(self, votes, /):
+    def attrib(self, votes: taken_format, /) -> dict[Party, int]:
         """Returns the seats attributed from the cast `votes`.
 
         Override in subclasses.
@@ -120,7 +125,7 @@ class Proportional(Attribution):
         if wrap:
             nothreshold_attrib = cls.attrib
 
-            def attrib(self, votes, /, *args, **kwargs):
+            def attrib(self, votes: results_format.SIMPLE[Party], /, *args, **kwargs):
                 """Wrapper from the Proportional class around a subclass's attrib method."""
                 if self.threshold:
                     original_votes = votes
@@ -133,13 +138,15 @@ class Proportional(Attribution):
 
             cls.attrib = attrib
 
+    attrib: Callable[[Self, taken_format], dict[Party, int]]
+
 class RankIndexMethod(Proportional):
     """Abstract base class of rank-index methods - one kind of proportional."""
 
     __slots__ = ()
 
     @abc.abstractmethod
-    def rank_index_function(self, t, a, /):
+    def rank_index_function(self, t, a, /) -> int|float|Fraction:
         """
         Override in subclasses.
 
@@ -156,7 +163,7 @@ class RankIndexMethod(Proportional):
         The seat will be attributed to the party maximizing that value.
         """
 
-    def attrib(self, votes, /):
+    def attrib(self, votes: results_format.SIMPLE[Party], /) -> dict[Party, int]:
         """
         This implementation is optimized so as to call rank_index_function
         as few times as possible.
@@ -168,7 +175,7 @@ class RankIndexMethod(Proportional):
 
         parties = list(votes)
         self.randomobj.shuffle(parties)
-        parties.sort(key=rank_index_values.get)
+        parties.sort(key=rank_index_values.__getitem__)
 
         seats = Counter()
 
@@ -209,6 +216,7 @@ class _Majority(Attribution):
 
     __slots__ = ()
     taken_format = results_format.SIMPLE
+    threshold: float|Fraction
 
     def attrib(self, votes, /):
         win = max(votes, key=votes.get)
@@ -276,7 +284,7 @@ class InstantRunoff(Attribution):
             for parti, score in first_places.items():
                 if (score / total) > 0.5:
                     return Counter({parti: self.nseats})
-            blacklisted.add(min(first_places, key=first_places.get))
+            blacklisted.add(min(first_places, key=first_places.__getitem__))
         raise Exception("Shouldn't happen")
 
 class Borda(Attribution):
@@ -299,7 +307,7 @@ class Borda(Attribution):
         for ballot in votes:
             for i, parti in enumerate(reversed(ballot), start=1):
                 scores[parti] += i
-        return Counter({max(scores, key=scores.get): self.nseats})
+        return Counter({max(scores, key=scores.__getitem__): self.nseats})
 
 class Condorcet(Attribution):
     """
@@ -460,7 +468,7 @@ class Hare(Proportional):
             seats[parti] = i
             remainders[parti] = r
 
-        seats.update(sorted(remainders, key=remainders.get, reverse=True)[:nseats - seats.total()])
+        seats.update(sorted(remainders, key=remainders.__getitem__, reverse=True)[:nseats - seats.total()])
         return seats
 
 LargestRemainder = Hare

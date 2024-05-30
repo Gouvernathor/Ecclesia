@@ -1,12 +1,16 @@
 import abc
 from collections import namedtuple, Counter
+# from typing import NamedTuple, NamedTupleMeta # type: ignore
 from . import results_format, voting, attribution
 from .. import _settings
 
 class ElectionMethod(namedtuple("ElectionMethod", ("voting_method", "attribution_method")), abc.ABC):
+# class ElectionMethod(NamedTuple, metaclass=type("TheMeta", (abc.ABCMeta, NamedTupleMeta), {})):
     """Type regrouping a voting method and an attribution method."""
 
     __slots__ = ()
+    voting_method: voting.VotingMethod
+    attribution_method: attribution.Attribution
 
     __lt__ = __gt__ = __le__ = __ge__ = lambda self, other: NotImplemented
 
@@ -24,7 +28,7 @@ class Sortition:
 
     __slots__ = ("nseats", "randomobj")
 
-    def __init__(self, nseats, *, randomkey=None, randomobj=None):
+    def __init__(self, nseats: int, *, randomkey=None, randomobj: _settings.Random|None = None):
         self.nseats = nseats
         if randomobj is None:
             randomobj = _settings.Random(randomkey)

@@ -1,10 +1,15 @@
 import abc
 from math import nextafter, floor
-from typing import ClassVar, Collection
+from typing import ClassVar, Collection, TypeVar
 from . import results_format
 from .. import actors, _settings
 
 voting_methods = []
+
+# TODO: in 3.13, use class VotingMethod[Voter=actors.HasOpinions, Party=actors.HasOpinions](abc.ABC)
+# and class VotingMethodX[Voter, Party](VotingMethod[Voter, Party])
+Party = TypeVar("Party", bound=actors.HasOpinions)
+Voter = TypeVar("Voter", bound=actors.HasOpinions)
 
 class VotingMethod(abc.ABC):
     """
@@ -26,7 +31,7 @@ class VotingMethod(abc.ABC):
     return_format: ClassVar = None
     name: ClassVar = None
 
-    def __init__(self, *, partis, randomobj=None):
+    def __init__(self, *, partis: Collection[Party], randomobj=None):
         if None in (self.name, self.return_format):
             raise TypeError(f"Class {type(self)} is not instantiable.")
         self.partis = partis
@@ -40,7 +45,7 @@ class VotingMethod(abc.ABC):
             voting_methods.append(cls)
 
     @abc.abstractmethod
-    def vote(self, pool:Collection[actors.HasOpinions], /):
+    def vote(self, pool: Collection[Voter], /) -> results_format.formats[Party]:
         """Returns the ballots cast by the `pool` of voters.
 
         Override in subclasses.
@@ -66,7 +71,7 @@ class SingleVote(VotingMethod):
     return_format = results_format.SIMPLE
     name = "Single Vote"
 
-    def vote(self, pool):
+    def vote(self, pool: Collection[Voter]) -> results_format.SIMPLE[Party]:
         """
         Tactical voting isn't simulated. Everyone votes for their favorite party.
         """
@@ -86,7 +91,7 @@ class OrderingVote(VotingMethod):
     return_format = results_format.ORDER
     name = "Positional/Rank Vote"
 
-    def vote(self, pool):
+    def vote(self, pool: Collection[Voter]) -> results_format.ORDER[Party]:
         bigliz = []
         partees = list(self.partis)
         self.randomobj.shuffle(partees)
@@ -111,11 +116,11 @@ class CardinalVote(VotingMethod):
     return_format = results_format.SCORES
     name = "Score Vote"
 
-    def __init__(self, grades, **kwargs):
+    def __init__(self, grades: int, **kwargs):
         super().__init__(**kwargs)
         self.grades = grades
 
-    def vote(self, pool):
+    def vote(self, pool: Collection[Voter]) -> results_format.SCORES[Party]:
         """
         Each voter gives a grade to each party proportional to the raw
         disagreement.
@@ -140,7 +145,7 @@ class CardinalVote(VotingMethod):
 class BalancedCardinalVote(CardinalVote, final=False):
     """Alternative implementation of CardinalVote."""
 
-    def vote(self, pool):
+    def vote(self, pool: Collection[Voter]) -> results_format.SCORES[Party]:
         """
         Each voter gives a grade to each party, affine wrt its minimum and
         maximum disagreement with the candidate parties only.
@@ -186,7 +191,7 @@ class ApprovalVote(BalancedCardinalVote):
     def __init__(self, **kwargs):
         super().__init__(grades=2, **kwargs)
 
-    def vote(self, pool):
+    def vote(self, pool: Collection[Voter]) -> results_format.SIMPLE[Party]:
         scores = super().vote(pool)
         rv = results_format.SIMPLE()
         for parti, (_nays, yeas) in scores.items():

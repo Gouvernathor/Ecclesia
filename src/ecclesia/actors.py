@@ -1,8 +1,8 @@
 import abc
-from collections import Counter, namedtuple
+from collections import Counter
 from collections.abc import Iterable, Sequence
 from math import sqrt, hypot, erf, nan as NAN
-from typing import ClassVar
+from typing import ClassVar, NamedTuple, Self
 from . import _settings
 
 SQ2 = sqrt(2)
@@ -74,7 +74,7 @@ class HasOpinions(abc.ABC):
                 k=self.nopinions)
         self.opinions = opinions
 
-    def __xor__(self, other, /):
+    def __xor__(self, other: Self, /) -> float:
         """
         Subclasses of HasOpinions are expected to override the `__xor__` method
         (for the `^` operator). It should take other instances of HasOpinions
@@ -96,13 +96,13 @@ class HasOpinions(abc.ABC):
         """
         return NotImplemented
 
-    def get_alignment(self=None, factors=None) -> float:
+    def get_alignment(self, factors=None) -> float:
         if factors is None:
             factors = self.opinion_alignment_factors
         return get_alignment(self.opinions, self.opinmax, factors)
 
 
-class Vote(namedtuple("Vote", ("votes_for", "votes_against"))):
+class Vote(NamedTuple):
     """ The results of a binary vote.
 
     The blank votes are not counted. To calculate a threshold on the whole
@@ -111,7 +111,8 @@ class Vote(namedtuple("Vote", ("votes_for", "votes_against"))):
     ``vote.votes_for / sum(house.members.values())``.
     """
 
-    __slots__ = ()
+    votes_for: int
+    votes_against: int
 
     __lt__ = __gt__ = __le__ = __ge__ = lambda self, other: NotImplemented
 
@@ -138,7 +139,7 @@ class Vote(namedtuple("Vote", ("votes_for", "votes_against"))):
         return self.votes_for / cast
 
     @staticmethod
-    def order(*votes):
+    def order(*votes: "Vote") -> list["Vote"]:
         """
         Returns the votes in order of decreasing ratio.
         The ties are ordered by decreasing number of positive votes,
@@ -207,7 +208,7 @@ class House:
                     pass
             self.nseats = nseats
 
-        def election(self) -> Counter[HasOpinions, int]:
+        def election(self) -> Counter[HasOpinions]:
             return self.election_method.election(self.voterpool)
 
         def __repr__(self):
@@ -217,7 +218,7 @@ class House:
             return f"<{type(self).__name__} {self.identifier!r}>"
 
     def __init__(self,
-                districts: Iterable[District]|dict[District, Counter[HasOpinions, int]],
+                districts: Iterable[District]|dict[District, Counter[HasOpinions]],
                 *, name=None, majority=.5):
         """
         `districts` may either be an iterable of district instances, if the
@@ -238,7 +239,7 @@ class House:
         self.majority = majority
 
     @property
-    def members(self) -> Counter[HasOpinions, int]:
+    def members(self) -> Counter[HasOpinions]:
         """
         Returns a Counter linking each party to the number of seats it holds,
         regardless of the district.
@@ -266,7 +267,7 @@ class House:
             rv += dnseats
         return rv
 
-    def election(self) -> Counter[HasOpinions, int]:
+    def election(self) -> Counter[HasOpinions]:
         """Triggers an election in each electoral district, returns the `members` result."""
         rv = Counter()
         for district in tuple(self.districts):
