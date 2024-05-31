@@ -67,7 +67,7 @@ class HasOpinions(abc.ABC):
     generated following an integral uniform law for each dimension. The optional
     `randomobj` parameter can be used to provide a random object (following the
     random.Random class specification) to generate the opinions, or a
-    `randomkey` to deterministically seed a new random object.
+    `randomseed` to deterministically seed a new random object.
 
     Finally, the objects having an opinion (typically, voters and parties) can
     be placed along a left-wing-right-wing-type axis, called the alignment.
@@ -87,11 +87,11 @@ class HasOpinions(abc.ABC):
 
     def __init__(self, opinions: Sequence[int]|None = None, *,
             randomobj: random.Random|None = None,
-            randomkey=None,
+            randomseed=None,
             ):
         if opinions is None:
             if randomobj is None:
-                randomobj = random.Random(randomkey)
+                randomobj = random.Random(randomseed)
             opinions = randomobj.choices(
                 range(-self.opinmax, self.opinmax+1),
                 k=self.nopinions)
