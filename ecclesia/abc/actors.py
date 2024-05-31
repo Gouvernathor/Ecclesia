@@ -4,6 +4,8 @@ from math import erf, hypot, sqrt
 import random
 from typing import ClassVar
 
+__all__ = ("get_alignment", "HasOpinions")
+
 SQ2 = sqrt(2)
 
 def _normal_to_uniform(x: float, mu: float, sigma: float):
