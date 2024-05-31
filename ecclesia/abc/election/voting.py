@@ -2,7 +2,7 @@ import abc
 from collections.abc import Collection
 from typing import ClassVar
 
-from . import Voter, Party
+from ..actors import Voter, Party
 from ...election.ballots import formats
 
 class Voting(abc.ABC):

@@ -2,7 +2,7 @@ import abc
 from collections.abc import Sequence
 from math import erf, hypot, sqrt
 import random
-from typing import ClassVar
+from typing import ClassVar, NewType
 
 __all__ = ("get_alignment", "HasOpinions")
 
@@ -129,3 +129,6 @@ class HasOpinions(abc.ABC):
         if factors is None:
             factors = self.opinion_alignment_factors
         return get_alignment(self.opinions, self.opinmax, factors)
+
+Voter = NewType("Voter", HasOpinions)
+Party = NewType("Party", HasOpinions)

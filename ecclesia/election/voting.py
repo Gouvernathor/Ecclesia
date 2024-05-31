@@ -5,7 +5,7 @@ import random
 from typing import ClassVar
 
 from . import ballots
-from ..abc.election import Voter, Party
+from ..abc.actors import Voter, Party
 from ..abc.election.voting import Voting
 
 __all__ = ("SingleVote", "OrderingVote", "CardinalVote", "ApprovalVote")
