@@ -184,3 +184,29 @@ class RankIndexMethod(Proportional):
                 parties.append(winner)
 
         return seats
+
+class DivisorMethod(RankIndexMethod):
+    """Abstract base class for divisor methods - one kind of rank-index attribution.
+
+    This class implements a mixin rank_index_function method, and has an
+    abstract divisor static abstract method that should be overridden in
+    subclasses.
+    """
+
+    @staticmethod
+    @abc.abstractmethod
+    def divisor(k: int, /) -> int|float|Fraction:
+        """
+        This is an abstract static method that should be overridden in subclasses.
+
+        `k` is the number of seats already attributed to a party.
+        The return value should be a real value, ideally an int or a Fraction
+        for exact calculations.
+        The return value should be increasing as `k` rises.
+        The method should be pure.
+        It is encouraged to only return int and Fraction values.
+        """
+
+    @classmethod
+    def rank_index_function(cls, t: Fraction, a: int, /) -> Fraction:
+        return Fraction(t, Fraction(cls.divisor(a)))
