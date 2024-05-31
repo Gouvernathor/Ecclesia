@@ -7,7 +7,7 @@ from typing import ClassVar, Self
 from ..actors import Party
 from ...election import ballots
 
-__all__ = ("AttributionFailure", "Attribution", "Proportional")
+__all__ = ("AttributionFailure", "Attribution", "Proportional", "RankIndexMethod", "DivisorMethod")
 
 _notpassed = object()
 
