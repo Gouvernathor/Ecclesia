@@ -1,6 +1,7 @@
 import abc
 from collections import Counter
 from collections.abc import Callable
+from fractions import Fraction
 from typing import ClassVar, Self
 
 from ..actors import Party
@@ -85,7 +86,7 @@ class Proportional(Attribution):
     attribute and does nothing of it.
     """
 
-    taken_ballot_format = ballots.Simple
+    taken_ballot_format = ballots.Simple[Party]
 
     def __init_subclass__(cls, wrap=True, **clskwargs):
         super().__init_subclass__(**clskwargs)
@@ -93,7 +94,7 @@ class Proportional(Attribution):
         if wrap:
             nothreshold_attrib = cls.attrib
 
-            def attrib(self: Self, votes: ballots.Simple, /, *args, **kwargs) -> Counter[Party]:
+            def attrib(self: Self, votes: ballots.Simple[Party], /, *args, **kwargs) -> Counter[Party]:
                 """Wrapper from the Proportional class around a subclass's attrib method."""
                 if self.threshold:
                     original_votes = votes
@@ -128,4 +129,58 @@ class Proportional(Attribution):
             contingency = contingency(*args, **kwargs)
         self.contingency = contingency
 
-    attrib: Callable[[Self, ballots.Simple], Counter[Party]]
+    attrib: Callable[[Self, ballots.Simple[Party]], Counter[Party]]
+
+class RankIndexMethod(Proportional):
+    """Abstract base class for rank-index methods - one kind of proportional attribution.
+
+    This class implements a mixin attrib method, and has an abstract
+    rank_index_function method that should be overridden in subclasses.
+    """
+
+    @abc.abstractmethod
+    def rank_index_function(self, t: Fraction, a: int, /) -> int|float|Fraction:
+        """
+        This is an abstract method that should be overridden in subclasses.
+
+        `t` is the percentage of votes received by a party, as a Fraction.
+        `a` is the number of seats already attributed to that same party.
+        The total number of seats can be accessed as self.nseats.
+
+        The function should be pure : it should not take into account any value
+        other than the two parameters and instance or class attributes.
+        It should return a real value, ideally an int or a Fraction for exact
+        calculations.
+        The return value should be increasing as `t` rises, and decreasing as
+        `a` rises.
+        The higher the return value, the higher chance for the party to receive
+        another seat.
+        """
+
+    def attrib(self, votes: ballots.Simple[Party], /) -> Counter[Party]:
+        """
+        This implementation is optimized so as to call rank_index_function as
+        few times as possible.
+        """
+        allvotes = votes.total()
+        fractions = {p: Fraction(v, allvotes) for p, v in votes.items()}
+
+        rank_index_values = {p: self.rank_index_function(f, 0) for p, f in fractions.items()}
+
+        parties = sorted(tuple(votes), key=rank_index_values.__getitem__)
+
+        seats = Counter()
+
+        for _s in range(self.nseats):
+            # may be reimplemented using sortedcollections.ValueSortedDict
+            winner = parties.pop()
+            seats[winner] += 1
+            rank_index_values[winner] = self.rank_index_function(fractions[winner], seats[winner])
+            for i, p in enumerate(parties):
+                if rank_index_values[p] >= rank_index_values[winner]:
+                    parties.insert(i, winner)
+                    break
+            else:
+                parties.append(winner)
+
+        return seats
