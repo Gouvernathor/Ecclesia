@@ -8,7 +8,14 @@ from . import ballots
 from ..abc.actors import Party
 from ..abc.election.attribution import Attribution, AttributionFailure, DivisorMethod, Proportional
 
-__all__ = ("Majority",)
+__all__ = (
+    "Majority",
+    "InstantRunoff", "Borda", "Condorcet",
+    "AverageScore", "MedianScore",
+    "DHondt", "HighestAverages",
+    "Webster", "SainteLague",
+    "Hare", "LargestRemainder",
+)
 
 _notpassed: Any = object()
 
