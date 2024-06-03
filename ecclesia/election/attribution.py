@@ -167,3 +167,41 @@ class Borda(Attribution):
             for i, party in enumerate(reversed(ballot), start=1):
                 scores[party] += i
         return Counter({max(scores, key=scores.__getitem__): self.nseats})
+
+class Condorcet(Attribution):
+    """
+    Attribution where the party that wins in a head-to-head matchup against
+    every other party wins all the seats.
+    If no such party exists, the attribution fails.
+
+    This doesn't support equally-ranked candidates - though the ballot format
+    doesn't support it in the first place.
+    This implementation also doesn't support incomplete ballots.
+    """
+    taken_ballot_format = ballots.Order[Party]
+
+    # TODO: add contingency support
+
+    class Standoff(AttributionFailure): pass
+
+    def attrib(self, votes: ballots.Order[Party], /) -> Counter[Party]:
+        # number of ballots where party1 wins against party2
+        counts: dict[Party, Counter[Party]] = defaultdict(Counter)
+        majority = len(votes) / 2
+
+        for ballot in votes:
+            for i, party1 in enumerate(ballot, start=1):
+                for party2 in ballot[i:]:
+                    counts[party1][party2] += 1
+
+        possible_win = set(counts)
+        for party, partycounter in counts.items():
+            for value in (+partycounter).values():
+                if value < majority:
+                    possible_win.discard(party)
+                    break
+
+        if possible_win:
+            winner, = possible_win
+            return Counter({winner: self.nseats})
+        raise Condorcet.Standoff
