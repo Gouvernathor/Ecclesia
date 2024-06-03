@@ -2,6 +2,7 @@ from collections import Counter, defaultdict
 from collections.abc import Sequence
 from fractions import Fraction
 from math import inf as INF, sqrt
+import random
 from statistics import fmean, median
 from typing import Any
 
@@ -349,3 +350,24 @@ class HuntingtonHill(DivisorMethod, wrap=False):
             raise AttributionFailure("No party reached the threshold")
         else:
             return contingency_attrib(original_votes)
+
+# Simple-based, random
+
+class Randomize(Attribution):
+    """
+    Randomized attribution. Everyone votes, then one ballot per seat to fill is
+    selected at random.
+    """
+    taken_ballot_format = ballots.Simple[Party]
+
+    def __init__(self, *args,
+            randomobj: random.Random|None = None,
+            randomseed=None,
+            **kwargs):
+        super().__init__(*args, **kwargs)
+        if randomobj is None:
+            randomobj = random.Random(randomseed)
+        self.randomobj = randomobj
+
+    def attrib(self, votes: ballots.Simple[Party], /) -> Counter[Party]:
+        return Counter(self.randomobj.choices(tuple(votes), tuple(votes.values()), k=self.nseats))
