@@ -56,6 +56,16 @@ class Attribution(abc.ABC):
         AttributionFailure exception.
         """
 
+# TODO: an abstract base class for threshold/contingency
+# since all args and kwargs must be passed to clone itself when contingency is
+# not passed, it must do the same thing as Proportional and wrap __init__
+
+# or give it an init_threshold_contingency method that all subclasses should call
+# in their __init__ ? Way cleaner.
+# it will be called several times for the different __init__ in the mro that will
+# call it though, so it needs to set the contingency only the first time
+# the init_threshold_contingency needs to be called before the super().__init__
+
 class Proportional(Attribution):
     """Abstract base class for proportional attributions.
 
