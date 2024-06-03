@@ -1,6 +1,7 @@
 from collections import Counter, defaultdict
 from collections.abc import Sequence
 from fractions import Fraction
+from statistics import fmean, median
 from typing import Any
 
 from . import ballots
@@ -10,6 +11,8 @@ from ..abc.election.attribution import Attribution, AttributionFailure
 __all__ = ("Majority",)
 
 _notpassed: Any = object()
+
+# Simple-based, majority
 
 class Majority(Attribution):
     """
@@ -93,6 +96,8 @@ class Majority(Attribution):
             raise AttributionFailure(msg)
         else:
             return contingency_attrib(votes)
+
+# Order-based
 
 class InstantRunoff(Attribution):
     """
@@ -205,3 +210,56 @@ class Condorcet(Attribution):
             winner, = possible_win
             return Counter({winner: self.nseats})
         raise Condorcet.Standoff
+
+# Score-based
+
+class AverageScore(Attribution):
+    """Gives the seats to the party with the highest average score.
+
+    Tallies where some parties are not graded by every ballot are supported.
+    """
+    taken_ballot_format = ballots.Scores[Party]
+
+    def attrib(self, votes: ballots.Scores[Party], /) -> Counter[Party]:
+        ngrades = votes.ngrades
+        winner = max(votes, key=(lambda party: fmean(range(ngrades), votes[party])))
+        return Counter({winner: self.nseats})
+
+class MedianScore(Attribution):
+    """Gives the seats to the party with the highest median score.
+
+    This is also called "majority judgment".
+
+    If there is a tie, the contingency method is called on the tied parties.
+    The default contingency is to take the maximum average score.
+
+    Tallies where some parties are not graded by every ballot are supported.
+    """
+    taken_ballot_format = ballots.Scores[Party]
+
+    # TODO: maybe implement contingency in a canonical way
+    # TODO: maybe allow the contingency to receive the vanilla vote and not the trimmed vote
+
+    def __init__(self, *args, contingency: Attribution = _notpassed, **kwargs):
+        super().__init__(*args, **kwargs)
+        if contingency is _notpassed:
+            contingency = AverageScore(*args, **kwargs)
+        self.contingency = contingency
+
+    def attrib(self, votes: ballots.Scores[Party], /) -> Counter[Party]:
+        allgrades_per_party: dict[Party, list[int]] = defaultdict(list)
+        for party, grades in votes.items():
+            for grade, qty in enumerate(grades):
+                allgrades_per_party[party].extend([grade] * qty)
+
+        medians = {party: median(partygrades) for party, partygrades in allgrades_per_party.items()}
+
+        winscore = max(medians.values())
+        winner, *other_winners = (party for party, score in medians.items() if score == winscore)
+
+        if not other_winners: # no tie
+            return Counter({winner: self.nseats})
+
+        winners = [winner, *other_winners]
+        trimmed_votes = ballots.Scores({party: votes[party] for party in winners})
+        return self.contingency.attrib(trimmed_votes)
