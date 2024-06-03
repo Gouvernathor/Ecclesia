@@ -149,3 +149,21 @@ class InstantRunoff(Attribution):
                 if ballot:
                     ballots_by_top_party[ballot[0]].append(ballot)
         raise Exception("This should never be reached")
+
+class Borda(Attribution):
+    """
+    Attribution method where each party receives points according to the rank
+    it has on each ballot. The party with the most points wins all the seats.
+
+    Uses the Modified Borda Count, where the least-ranked party receives 1
+    point, and unranked candidates receive 0 points.
+    So, ballots not ranking all candidates are supported.
+    """
+    taken_ballot_format = ballots.Order[Party]
+
+    def attrib(self, votes: ballots.Order[Party], /) -> Counter[Party]:
+        scores = Counter()
+        for ballot in votes:
+            for i, party in enumerate(reversed(ballot), start=1):
+                scores[party] += i
+        return Counter({max(scores, key=scores.__getitem__): self.nseats})
