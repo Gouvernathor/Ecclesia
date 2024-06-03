@@ -6,7 +6,7 @@ from typing import Any
 
 from . import ballots
 from ..abc.actors import Party
-from ..abc.election.attribution import Attribution, AttributionFailure
+from ..abc.election.attribution import Attribution, AttributionFailure, DivisorMethod, Proportional
 
 __all__ = ("Majority",)
 
@@ -263,3 +263,36 @@ class MedianScore(Attribution):
         winners = [winner, *other_winners]
         trimmed_votes = ballots.Scores({party: votes[party] for party in winners})
         return self.contingency.attrib(trimmed_votes)
+
+# Simple-based, proportionals
+
+class DHondt(DivisorMethod):
+    @staticmethod
+    def divisor(k, /):
+        return k+1
+
+HighestAverages = DHondt
+
+class Webster(DivisorMethod):
+    @staticmethod
+    def divisor(k, /):
+        # return k + .5 # inaccurate
+        # return Fraction(1, 2) + k # accurate but slow
+        return 2*k + 1
+
+SainteLague = Webster
+
+class Hare(Proportional):
+    def attrib(self, votes: ballots.Simple[Party], /) -> Counter[Party]:
+        seats = Counter()
+        remainders = {}
+        nseats = self.nseats
+        sumvotes = votes.total()
+
+        for parti, score in votes.items():
+            seats[parti], remainders[parti] = divmod(score * nseats, sumvotes)
+
+        seats.update(sorted(remainders, key=remainders.__getitem__, reverse=True)[:nseats - seats.total()])
+        return seats
+
+LargestRemainder = Hare
