@@ -38,6 +38,8 @@ class SingleVote(_VotingBase):
 
     Each voter casts one vote for one of the available candidates, or for none
     of them.
+    This is guaranteed to include all the parties in the returned value, even
+    with a count of 0 ballots.
     """
 
     ballot_format = ballots.Simple
@@ -83,6 +85,7 @@ class CardinalVote(_VotingBase):
     of us?
     The latter is more akin to OrderingVote, so I used the former, but it causes
     issues when the number of grades is low.
+    This is guaranteed to include all the parties in the returned value.
     """
 
     ballot_format = ballots.Scores
@@ -156,6 +159,8 @@ class ApprovalVote(BalancedCardinalVote):
     for instance). That's why the format it returns is not the same as with
     CardinalVote.
     If you want a scores-like attribution, use CardinalVote(2) instead.
+    This is guaranteed to include all the parties in the returned value, even
+    with a count of 0 ballots.
     """
 
     ballot_format = ballots.Simple
