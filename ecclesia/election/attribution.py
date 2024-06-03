@@ -1,5 +1,5 @@
-from collections import Counter
-from collections.abc import Collection
+from collections import Counter, defaultdict
+from collections.abc import Sequence
 from fractions import Fraction
 from typing import Any
 
@@ -124,4 +124,28 @@ class InstantRunoff(Attribution):
                 if score * 2 > total:
                     return Counter({parti: self.nseats})
             blacklist.add(min(first_places, key=first_places.__getitem__))
+        raise Exception("This should never be reached")
+
+    def _attrib2(self, votes: ballots.Order[Party], /) -> Counter[Party]:
+        blacklist = set()
+
+        ballots_by_top_party: dict[Party, list[Sequence[Party]]] = defaultdict(list)
+        for ballot in votes:
+            if not ballot:
+                continue
+            ballots_by_top_party[ballot[0]].append(ballot)
+
+        while ballots_by_top_party:
+            total = sum(map(len, ballots_by_top_party.values()))
+            for party, ballots in ballots_by_top_party.items():
+                if len(ballots) * 2 > total:
+                    return Counter({party: self.nseats})
+
+            loser = min(ballots_by_top_party, key=lambda party: len(ballots_by_top_party[party]))
+            blacklist.add(loser)
+            for ballot in ballots_by_top_party.pop(loser):
+                while ballot and (ballot[0] in blacklist):
+                    ballot = ballot[1:]
+                if ballot:
+                    ballots_by_top_party[ballot[0]].append(ballot)
         raise Exception("This should never be reached")
