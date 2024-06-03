@@ -1,6 +1,7 @@
 from collections import Counter, defaultdict
 from collections.abc import Sequence
 from fractions import Fraction
+from math import inf as INF, sqrt
 from statistics import fmean, median
 from typing import Any
 
@@ -15,6 +16,7 @@ __all__ = (
     "DHondt", "HighestAverages",
     "Webster", "SainteLague",
     "Hare", "LargestRemainder",
+    "HuntingtonHill",
 )
 
 _notpassed: Any = object()
@@ -303,3 +305,47 @@ class Hare(Proportional):
         return seats
 
 LargestRemainder = Hare
+
+class HuntingtonHill(DivisorMethod, wrap=False):
+    """
+    This method requires some more creativity and tweaks, as the divisor won't
+    work without an initial seats value, causing a division by zero.
+    As a result, a threshold is required.
+    For a situation where the candidate parties are already limited by other
+    means (for example when attributing representatives to US states) to be less
+    or equal to the number of seats, the threshold can be set to 0.
+    """
+
+    def __init__(self, *args, threshold, **kwargs):
+        super().__init__(*args, threshold=threshold, **kwargs)
+
+    @staticmethod
+    def divisor(k, /):
+        # cast to the closest Rational to contain rounding errors
+        return Fraction(sqrt(k*(k+1)))
+
+    def rank_index_function(self, t: Fraction, a: int, /):
+        if not a:
+            return INF
+        return super().rank_index_function(t, a)
+
+    def attrib(self, votes: ballots.Simple[Party], /) -> Counter[Party]:
+        """
+        Proportional's attrib wrapper will not work, since the method to call
+        after the parties are filtered is not the class's method, but the
+        superclass's.
+        """
+
+        original_votes = votes
+        votes_thresh = self.threshold * votes.total()
+        votes = ballots.Simple({p: v for p, v in votes.items() if v >= votes_thresh})
+
+        if votes:
+            return super().attrib(votes)
+
+        try:
+            contingency_attrib = self.contingency.attrib # type: ignore
+        except AttributeError:
+            raise AttributionFailure("No party reached the threshold")
+        else:
+            return contingency_attrib(original_votes)
