@@ -93,3 +93,35 @@ class Majority(Attribution):
             raise AttributionFailure(msg)
         else:
             return contingency_attrib(votes)
+
+class InstantRunoff(Attribution):
+    """
+    Attribution method where the party with the least votes is eliminated, and
+    its votes are redistributed to the other parties according to the voters'
+    preferences. It repeats until a party reaches an absolute majority of the
+    remaining votes, winning all the seats.
+    """
+    """
+    This only supports ballots in which all the candidates are ranked.
+    (Actually, not sure...)
+    """
+    taken_ballot_format = ballots.Order[Party]
+
+    def attrib(self, votes: ballots.Order[Party], /) -> Counter[Party]:
+        blacklist = set()
+
+        parties = {party for ballot in votes for party in ballot}
+        for _i in range(len(parties)):
+            first_places = Counter()
+            for ballot in votes:
+                for party in ballot:
+                    if party not in blacklist:
+                        first_places[party] += 1
+                        break
+
+            total = first_places.total()
+            for parti, score in first_places.items():
+                if score * 2 > total:
+                    return Counter({parti: self.nseats})
+            blacklist.add(min(first_places, key=first_places.__getitem__))
+        raise Exception("This should never be reached")
